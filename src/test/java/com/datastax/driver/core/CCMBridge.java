@@ -41,12 +41,13 @@ public class CCMBridge {
     public static final String IP_PREFIX;
 
     private static final String CASSANDRA_VERSION_REGEXP = "\\d\\.\\d\\.\\d+(-\\w+)?";
+    private static final String CASSANDRA_VERSION_3_REGEXP = "\\d\\.\\d+(-\\w+)?";
 
     static final File CASSANDRA_DIR;
     static final String CASSANDRA_VERSION;
     static {
         String version = System.getProperty("cassandra.version");
-        if (version.matches(CASSANDRA_VERSION_REGEXP)) {
+        if (version.matches(CASSANDRA_VERSION_REGEXP) || version.matches(CASSANDRA_VERSION_3_REGEXP)) {
             CASSANDRA_DIR = null;
             CASSANDRA_VERSION = "-v " + version;
         } else {

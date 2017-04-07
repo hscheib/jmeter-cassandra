@@ -9,6 +9,7 @@ import org.apache.cassandra.jmeter.config.CassandraSessionFactory;
 import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.jmeter.threads.JMeterVariables;
 import org.apache.jmeter.util.JMeterUtils;
+import org.relaxng.datatype.Datatype;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -35,7 +36,7 @@ public class SessionFactoryTest extends CCMBridge.PerClassSingleNodeCluster {
 
 
     private static boolean exclude(DataType t) {
-        return t.getName() == DataType.Name.COUNTER;
+        return t.getName() == DataType.Name.COUNTER || t.getName() == DataType.Name.DURATION;
     }
 
     @Override

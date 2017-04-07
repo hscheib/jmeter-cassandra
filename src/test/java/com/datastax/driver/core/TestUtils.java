@@ -14,6 +14,7 @@ package com.datastax.driver.core;/*
  *   limitations under the License.
  */
 
+import com.google.common.reflect.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +79,8 @@ public abstract class TestUtils {
                 bs.setString(name, (String)value);
                 break;
             case TIMESTAMP:
-                bs.setDate(name, (Date)value);
+                Date date = (Date)value;
+                bs.setDate(name, LocalDate.fromMillisSinceEpoch(date.getTime()));
                 break;
             case UUID:
                 bs.setUUID(name, (UUID)value);
@@ -119,6 +121,8 @@ public abstract class TestUtils {
                 return row.getBool(name);
             case COUNTER:
                 return row.getLong(name);
+            case DATE:
+                return row.getDate(name);
             case DECIMAL:
                 return row.getDecimal(name);
             case DOUBLE:
@@ -129,10 +133,16 @@ public abstract class TestUtils {
                 return row.getInet(name);
             case INT:
                 return row.getInt(name);
+            case SMALLINT:
+                return row.get(name, short.class);
             case TEXT:
                 return row.getString(name);
             case TIMESTAMP:
-                return row.getDate(name);
+                return row.getTimestamp(name);
+            case TIME:
+                return row.getTime(name);
+            case TINYINT:
+                return row.getByte(name);
             case UUID:
                 return row.getUUID(name);
             case VARCHAR:
@@ -142,11 +152,14 @@ public abstract class TestUtils {
             case TIMEUUID:
                 return row.getUUID(name);
             case LIST:
-                return row.getList(name, type.getTypeArguments().get(0).asJavaClass());
+                return row.getList(name, type.getTypeArguments().get(0).getClass());
             case SET:
-                return row.getSet(name, type.getTypeArguments().get(0).asJavaClass());
+                return row.getSet(name, type.getTypeArguments().get(0).getClass());
             case MAP:
-                return row.getMap(name, type.getTypeArguments().get(0).asJavaClass(), type.getTypeArguments().get(1).asJavaClass());
+                System.out.println(name + " " + type.getTypeArguments().get(0) + " " + type.getTypeArguments().get(1));
+                System.out.println(name + " " + type.getTypeArguments().get(0).getClass() + " " + type.getTypeArguments().get(1).getClass());
+                System.out.println(row.toString());
+                return row.getMap(name, TypeToken.of(type.getTypeArguments().get(0).getClass()), TypeToken.of(type.getTypeArguments().get(1).getClass()));
         }
         throw new RuntimeException("Missing handling of " + type);
     }
@@ -312,7 +325,7 @@ public abstract class TestUtils {
         // keep alive kicks in, but that's a fairly long time. So we cheat and trigger a force
         // the detection by forcing a request.
         if (waitForDead || waitForOut)
-            cluster.manager.submitSchemaRefresh(null, null,null);
+            cluster.manager.submitSchemaRefresh(null, null,null,null);
 
         InetAddress address;
         try {
