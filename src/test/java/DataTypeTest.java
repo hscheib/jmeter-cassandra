@@ -401,7 +401,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
             rs = session.execute(execute_string);
             assertTrue(rs.isExhausted());
         }
-        assertEquals(SAMPLE_DATA.size(), 15);
+        assertEquals(SAMPLE_DATA.size(), 18);
         assertEquals(PRIMITIVE_INSERT_STATEMENTS.size(), SAMPLE_DATA.size());
     }
 
@@ -420,7 +420,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
             assertEquals(TestUtils.getValue(row, "k", dataType), value);
             assertEquals(TestUtils.getValue(row, "v", dataType), value);
         }
-        assertEquals(SAMPLE_DATA.size(), 15);
+        assertEquals(SAMPLE_DATA.size(), 18);
         assertEquals(PRIMITIVE_SELECT_STATEMENTS.keySet().size(), SAMPLE_DATA.size());
     }
 
@@ -516,7 +516,6 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
 
             Object value = TestUtils.getFixedValue(dt);
 
-            System.out.println(dt.getName().toString() + " " + value);
             TypeCodec codec = new CodecRegistry().codecFor(dt);
             assertEquals(codec.deserialize(codec.serialize(value, ProtocolVersion.V3), ProtocolVersion.V3), value);
         }
@@ -525,7 +524,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
         try {
             bigIntTypeCodec.serialize(4, ProtocolVersion.V3);
             fail("This should not have worked");
-        } catch (InvalidTypeException e) { /* That's what we want */ }
+        } catch (ClassCastException e) { /* That's what we want */ }
 
         try {
             ByteBuffer badValue = ByteBuffer.allocate(4);

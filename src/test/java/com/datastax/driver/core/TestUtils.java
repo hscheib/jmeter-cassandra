@@ -239,12 +239,16 @@ public abstract class TestUtils {
                     return InetAddress.getByAddress(new byte[]{(byte)127, (byte)0, (byte)0, (byte)1});
                 case INT:
                     return 24;
+                case SMALLINT:
+                    return new Short("2");
                 case TEXT:
                     return "A text string";
                 case TIME:
-                    new Date(872835240000L).getTime();
+                    return new Date(872835240000L).getTime();
                 case TIMESTAMP:
                     return new Date(1352288289L);
+                case TINYINT:
+                    return new Byte("4");
                 case UUID:
                     return UUID.fromString("087E9967-CCDC-4A9B-9036-05930140A41B");
                 case VARCHAR:
