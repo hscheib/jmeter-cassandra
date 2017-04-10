@@ -60,6 +60,10 @@ public abstract class TestUtils {
             case COUNTER:
                 // Just a no-op, we shouldn't handle counters the same way than other types
                 break;
+            case DATE:
+                Date date1 = (Date)value;
+                bs.setDate(name, LocalDate.fromMillisSinceEpoch(date1.getTime()));
+                break;
             case DECIMAL:
                 bs.setDecimal(name, (BigDecimal)value);
                 break;
@@ -152,17 +156,61 @@ public abstract class TestUtils {
             case TIMEUUID:
                 return row.getUUID(name);
             case LIST:
-                return row.getList(name, type.getTypeArguments().get(0).getClass());
+                return row.getList(name, getClass(type.getTypeArguments().get(0)));
             case SET:
-                return row.getSet(name, type.getTypeArguments().get(0).getClass());
+                return row.getSet(name, getClass(type.getTypeArguments().get(0)));
             case MAP:
-                System.out.println(name + " " + type.getTypeArguments().get(0) + " " + type.getTypeArguments().get(1));
-                System.out.println(name + " " + type.getTypeArguments().get(0).getClass() + " " + type.getTypeArguments().get(1).getClass());
-                System.out.println(row.toString());
-                return row.getMap(name, TypeToken.of(type.getTypeArguments().get(0).getClass()), TypeToken.of(type.getTypeArguments().get(1).getClass()));
+                return row.getMap(name, getClass(type.getTypeArguments().get(0)), getClass(type.getTypeArguments().get(1)));
         }
         throw new RuntimeException("Missing handling of " + type);
     }
+
+    public static Class getClass(DataType type) {
+        switch (type.getName()) {
+            case ASCII:
+                return String.class;
+            case BIGINT:
+                return Long.class;
+            case BLOB:
+                return ByteBuffer.class;
+            case BOOLEAN:
+                return Boolean.class;
+            case COUNTER:
+                return Long.class;
+            case DATE:
+                return LocalDate.class;
+            case DECIMAL:
+                return BigDecimal.class;
+            case DOUBLE:
+                return Double.class;
+            case FLOAT:
+                return Float.class;
+            case INET:
+                return InetAddress.class;
+            case INT:
+                return Integer.class;
+            case SMALLINT:
+                return Short.class;
+            case TEXT:
+                return String.class;
+            case TIMESTAMP:
+                return Date.class;
+            case TIME:
+                return Long.class;
+            case TINYINT:
+                return Byte.class;
+            case UUID:
+                return UUID.class;
+            case VARCHAR:
+                return String.class;
+            case VARINT:
+                return BigInteger.class;
+            case TIMEUUID:
+                return UUID.class;
+        }
+        throw new RuntimeException("Missing handling of " + type);
+    }
+
 
     // Always return the "same" value for each type
     @SuppressWarnings("serial")
@@ -179,6 +227,8 @@ public abstract class TestUtils {
                     return true;
                 case COUNTER:
                     throw new UnsupportedOperationException("Cannot 'getSomeValue' for counters");
+                case DATE:
+                    return LocalDate.fromMillisSinceEpoch(872835240000L);
                 case DECIMAL:
                     return new BigDecimal("3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679");
                 case DOUBLE:
@@ -191,6 +241,8 @@ public abstract class TestUtils {
                     return 24;
                 case TEXT:
                     return "A text string";
+                case TIME:
+                    new Date(872835240000L).getTime();
                 case TIMESTAMP:
                     return new Date(1352288289L);
                 case UUID:

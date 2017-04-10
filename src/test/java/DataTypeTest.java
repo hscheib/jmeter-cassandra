@@ -16,6 +16,7 @@
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.InvalidTypeException;
+import com.google.common.collect.Ordering;
 import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
@@ -32,7 +33,7 @@ import static org.testng.Assert.*;
  * Tests DataType class to ensure data sent in is the same as data received
  * All tests are executed via a Simple Statements
  * Counters are the only datatype not tested within the entirety of the suite.
- *     There is, however, an isolated test case that needs to be implemented.
+ * There is, however, an isolated test case that needs to be implemented.
  * All statements and sample data is easily exportable via the print_*() methods.
  */
 public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
@@ -90,7 +91,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
                         tableDefinitions.add(String.format("CREATE TABLE %1$s_%2$s_%3$s (k %3$s PRIMARY KEY, v %1$s<%2$s, %3$s>)", dataTypeName, typeArgument1, typeArgument2));
                     }
                 }
-            // Create SET and LIST data type definitions
+                // Create SET and LIST data type definitions
             } else {
                 for (DataType typeArgument : DATA_TYPE_PRIMITIVES) {
                     if (exclude(typeArgument))
@@ -131,7 +132,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
                     // Not supported in an insert statement
                     break;
                 case DATE:
-                    sampleData.put(dataType, Integer.toUnsignedLong((int)new Date(872835240000L).getTime()));
+                    sampleData.put(dataType, LocalDate.fromMillisSinceEpoch(872835240000L));
                     break;
                 case DECIMAL:
                     sampleData.put(dataType, new BigDecimal("12.3E+7"));
@@ -148,7 +149,8 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
                 case INET:
                     try {
                         sampleData.put(dataType, InetAddress.getByName("123.123.123.123"));
-                    } catch (java.net.UnknownHostException e) {}
+                    } catch (java.net.UnknownHostException e) {
+                    }
                     break;
                 case INT:
                     sampleData.put(dataType, Integer.MAX_VALUE);
@@ -169,7 +171,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
                     sampleData.put(dataType, UUID.fromString("FE2B4360-28C6-11E2-81C1-0800200C9A66"));
                     break;
                 case TINYINT:
-                    sampleData.put(dataType,2);
+                    sampleData.put(dataType, new Byte("4"));
                     break;
                 case UUID:
                     sampleData.put(dataType, UUID.fromString("067e6162-3b6f-4ae2-a171-2470b63dff00"));
@@ -190,7 +192,8 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
 
     /**
      * Generates the sample collections that will be used in testing
-     */ private static HashMap<DataType, Object> getSampleCollections() {
+     */
+    private static HashMap<DataType, Object> getSampleCollections() {
         HashMap<DataType, Object> sampleCollections = new HashMap<DataType, Object>();
         HashMap<DataType, Object> setAndListCollection;
         HashMap<DataType, HashMap<DataType, Object>> mapCollection;
@@ -264,13 +267,17 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
                 value = "0xCAFE";
                 break;
 
+            case DATE:
+                LocalDate d = (LocalDate) SAMPLE_DATA.get(dataType);
+                value = "'" + d.toString() + "'";
+                break;
             case INET:
                 InetAddress v1 = (InetAddress) SAMPLE_DATA.get(dataType);
                 value = String.format("'%s'", v1.getHostAddress());
                 break;
 
             case TIMESTAMP:
-                Date v2 = (Date)SAMPLE_DATA.get(dataType);
+                Date v2 = (Date) SAMPLE_DATA.get(dataType);
                 value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(v2);
             case ASCII:
             case TEXT:
@@ -431,7 +438,10 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
      */
     public void collectionInsertTest() throws Throwable {
         ResultSet rs;
-        for (String execute_string : COLLECTION_INSERT_STATEMENTS) {
+        List<String> statements = (List) COLLECTION_INSERT_STATEMENTS;
+        Collections.sort(statements, Ordering.usingToString());
+
+        for (String execute_string : statements) {
             rs = session.execute(execute_string);
             assertTrue(rs.isExhausted());
         }
@@ -468,15 +478,17 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
                 Object val = TestUtils.getValue(row, "k", typeArgument2);
                 Object val2 = SAMPLE_DATA.get(typeArgument2);
                 assertEquals(TestUtils.getValue(row, "k", typeArgument2), SAMPLE_DATA.get(typeArgument2));
-//                assertEquals(TestUtils.getValue(row, "v", dataType), expectedMap);
+                assertEquals(TestUtils.getValue(row, "v", dataType), expectedMap);
             } else {
                 Object expectedValue = sampleValueMap.get(typeArgument1);
 
+                Object val = TestUtils.getValue(row, "k", typeArgument1);
+                Object val2 = SAMPLE_DATA.get(typeArgument1);
                 assertEquals(TestUtils.getValue(row, "k", typeArgument1), SAMPLE_DATA.get(typeArgument1));
                 assertEquals(TestUtils.getValue(row, "v", dataType), expectedValue);
             }
         }
-        assertEquals(SAMPLE_COLLECTIONS.size(), 255);
+        assertEquals(SAMPLE_COLLECTIONS.size(), 360);
         assertEquals(COLLECTION_SELECT_STATEMENTS.keySet().size(), SAMPLE_COLLECTIONS.size());
     }
 
@@ -498,15 +510,15 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
     @Test(groups = "long")
     public void serializeDeserializeTest() {
 
-        for (DataType dt : DataType.allPrimitiveTypes())
-        {
+        for (DataType dt : DataType.allPrimitiveTypes()) {
             if (exclude(dt))
                 continue;
 
             Object value = TestUtils.getFixedValue(dt);
 
+            System.out.println(dt.getName().toString() + " " + value);
             TypeCodec codec = new CodecRegistry().codecFor(dt);
-            assertEquals(codec.deserialize(codec.serialize(value, ProtocolVersion.V3),ProtocolVersion.V3), value);
+            assertEquals(codec.deserialize(codec.serialize(value, ProtocolVersion.V3), ProtocolVersion.V3), value);
         }
 
         TypeCodec bigIntTypeCodec = new CodecRegistry().codecFor(DataType.bigint());
@@ -517,7 +529,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
 
         try {
             ByteBuffer badValue = ByteBuffer.allocate(4);
-            bigIntTypeCodec.deserialize(badValue,ProtocolVersion.V3);
+            bigIntTypeCodec.deserialize(badValue, ProtocolVersion.V3);
             fail("This should not have worked");
         } catch (InvalidTypeException e) { /* That's what we want */ }
     }
@@ -530,7 +542,7 @@ public class DataTypeTest extends CCMBridge.PerClassSingleNodeCluster {
         DataType dt = DataType.list(DataType.text());
 
         TypeCodec codec = new CodecRegistry().codecFor(dt);
-        assertEquals(codec.deserialize(codec.serialize(l, ProtocolVersion.V3),ProtocolVersion.V3), l);
+        assertEquals(codec.deserialize(codec.serialize(l, ProtocolVersion.V3), ProtocolVersion.V3), l);
 
 
         try {
