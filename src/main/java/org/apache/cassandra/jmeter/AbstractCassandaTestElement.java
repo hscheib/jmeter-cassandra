@@ -38,9 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A base class for all Cassandra test elements handling the basics of a CQL request.
- *
  */
-public abstract class AbstractCassandaTestElement extends AbstractTestElement implements TestStateListener{
+public abstract class AbstractCassandaTestElement extends AbstractTestElement implements TestStateListener {
     private static final long serialVersionUID = 235L;
 
     private static final Logger log = LoggingManager.getLoggerForClass();
@@ -52,7 +51,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     // String used to indicate a null value
     private static final String NULL_MARKER =
-            JMeterUtils.getPropDefault("cassandrasampler.nullmarker","]NULL["); // $NON-NLS-1$
+            JMeterUtils.getPropDefault("cassandrasampler.nullmarker", "]NULL["); // $NON-NLS-1$
 
     private static final int MAX_OPEN_PREPARED_STATEMENTS =
             JMeterUtils.getPropDefault("cassandrasampler.maxopenpreparedstatements", 100);
@@ -61,7 +60,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     // Query types (used to communicate with GUI)
     // N.B. These must not be changed, as they are used in the JMX files
-    static final String SIMPLE   = "Simple Statement"; // $NON-NLS-1$
+    static final String SIMPLE = "Simple Statement"; // $NON-NLS-1$
     static final String PREPARED = "Prepared Statement"; // $NON-NLS-1$
     static final String DYNAMIC_BATCH = "Dynamic Batch"; // $NON-NLS-1$
 
@@ -95,9 +94,9 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     private int batchStatmentCount = 0;
 
     /**
-     *  Cache of PreparedStatements stored in a per-connection basis. Each entry of this
-     *  cache is another Map mapping the statement string to the actual PreparedStatement.
-     *  At one time a Connection is only held by one thread
+     * Cache of PreparedStatements stored in a per-connection basis. Each entry of this
+     * cache is another Map mapping the statement string to the actual PreparedStatement.
+     * At one time a Connection is only held by one thread
      */
     private static final Map<Session, Map<String, PreparedStatement>> perConnCache =
             new ConcurrentHashMap<Session, Map<String, PreparedStatement>>();
@@ -110,7 +109,6 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     /**
      * Execute the test element.
-     *
      *
      * @param conn a {@link org.apache.jmeter.samplers.SampleResult} in case the test should sample; <code>null</code> if only execution is requested
      * @throws UnsupportedOperationException if the user provided incorrect query type
@@ -134,7 +132,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
         } else if (PREPARED.equals(_queryType) || DYNAMIC_BATCH.equals(_queryType)) {
             BoundStatement pstmt = getPreparedStatement(conn);
             setArguments(pstmt);
-            pstmt.setConsistencyLevel(getConsistencyLevelCL()) ;
+            pstmt.setConsistencyLevel(getConsistencyLevelCL());
             stmt = pstmt;
             if (DYNAMIC_BATCH.equals(_queryType)) {
                 BatchStatement batchStatement = this.batchStatement;  // TODO - replace this.batchstatement with a cache
@@ -158,10 +156,10 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     private static byte[] hexStringToByteArray(String s) throws ParseException {
 
-        if (! s.startsWith("0x")) {
+        if (!s.startsWith("0x")) {
             throw new ParseException("blob must start with 0x", 0);
         }
-        int len = s.length() -2 ;
+        int len = s.length() - 2;
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
             data[i / 2] = (byte) ((charToHexDigit(s.charAt(i + 2)) << 4)
@@ -171,18 +169,19 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     }
 
     private static int charToHexDigit(char ch) throws ParseException {
-        int digit = Character.digit(ch,16);
-        if (digit == -1 ) {
+        int digit = Character.digit(ch, 16);
+        if (digit == -1) {
             throw new ParseException("\"" + ch + "\" is an invalid character", 0);
         }
         return digit;
     }
 
     final protected static char[] hexArray = "0123456789abcdef".toCharArray();
+
     private static String bytesToHex(ByteBuffer bb) {
         char[] hexChars = new char[bb.remaining() * 2];
-        int j=0;
-        while (bb.hasRemaining() ) {
+        int j = 0;
+        while (bb.hasRemaining()) {
             int v = bb.get() & 0xFF;
             hexChars[j * 2] = hexArray[v >>> 4];
             hexChars[j * 2 + 1] = hexArray[v & 0x0F];
@@ -193,16 +192,16 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     }
 
     private void setArguments(BoundStatement pstmt) throws IOException {
-        if (getQueryArguments().trim().length()==0) {
+        if (getQueryArguments().trim().length() == 0) {
             return;
         }
 
         ColumnDefinitions colDefs = pstmt.preparedStatement().getVariables();
 
         String[] arguments = CSVSaveService.csvSplitString(getQueryArguments(), COMMA_CHAR);
-        if (arguments.length !=colDefs.size()) {
+        if (arguments.length != colDefs.size()) {
             // TODO - throw a non-transient exception here!
-            throw new RuntimeException("number of arguments ("+arguments.length+") and number in stmt (" + colDefs.size() + ") are not equal");
+            throw new RuntimeException("number of arguments (" + arguments.length + ") and number in stmt (" + colDefs.size() + ") are not equal");
         }
 
 
@@ -210,7 +209,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
             String argument = arguments[i];
 
             DataType tp = colDefs.getType(i);
-            Class<?> javaType = tp.getClass();
+            Class<?> javaType = getClass(tp);
             try {
                 if (javaType == Integer.class)
                     pstmt.setInt(i, Integer.parseInt(argument));
@@ -219,25 +218,23 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                 else if (javaType == ByteBuffer.class)
                     pstmt.setBytes(i, ByteBuffer.wrap(hexStringToByteArray(argument)));
                 else if (javaType == Date.class) {
-                    if (argument.length() == (CASSANDRA_DATE_FORMAT_STRING1 + "+ZZZ").length())
-                        pstmt.setDate(i, LocalDate.fromMillisSinceEpoch(CassandraDateFormat1.parse(argument).getTime()));
-                    else if (argument.length() == CASSANDRA_DATE_FORMAT_STRING2.length())
-                        pstmt.setDate(i, LocalDate.fromMillisSinceEpoch(CassandraDateFormat2.parse(argument).getTime()));
-                    else if (argument.length() == CASSANDRA_DATE_FORMAT_STRING3.length())
-                        pstmt.setDate(i, LocalDate.fromMillisSinceEpoch(CassandraDateFormat3.parse(argument).getTime()));
+                    if (argument.length() == (CASSANDRA_DATE_FORMAT_STRING1 + "+ZZZ").length()) {
+                        pstmt.setTimestamp(i, CassandraDateFormat1.parse(argument));
                     }
-
-                else if (javaType == BigDecimal.class)
-                        pstmt.setDecimal(i, new BigDecimal(argument));
+//                    else if (argument.length() == CASSANDRA_DATE_FORMAT_STRING2.length())
+//                        pstmt.setDate(i, LocalDate.fromMillisSinceEpoch(CassandraDateFormat2.parse(argument).getTime()));
+//                    else if (argument.length() == CASSANDRA_DATE_FORMAT_STRING3.length())
+//                        pstmt.setDate(i, LocalDate.fromMillisSinceEpoch(CassandraDateFormat3.parse(argument).getTime()));
+                } else if (javaType == BigDecimal.class)
+                    pstmt.setDecimal(i, new BigDecimal(argument));
                 else if (javaType == Double.class)
-                        pstmt.setDouble(i, Double.parseDouble(argument));
+                    pstmt.setDouble(i, Double.parseDouble(argument));
                 else if (javaType == Float.class)
                     pstmt.setFloat(i, Float.parseFloat(argument));
-                else if (javaType == InetAddress.class)  {
+                else if (javaType == InetAddress.class) {
                     int start = argument.startsWith("/") ? 1 : 0;    // strip off leading /
-                        pstmt.setInet(i, InetAddress.getByName(argument.substring(start)));
-                }
-                else if (javaType == Long.class)
+                    pstmt.setInet(i, InetAddress.getByName(argument.substring(start)));
+                } else if (javaType == Long.class)
                     pstmt.setLong(i, Long.parseLong(argument));
                 else if (javaType == String.class)
                     pstmt.setString(i, argument);
@@ -245,7 +242,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                     pstmt.setUUID(i, UUID.fromString(argument));
                 else if (javaType == BigInteger.class)
                     pstmt.setVarint(i, new BigInteger(argument));
-                    else if (javaType == TupleValue.class) {
+                else if (javaType == TupleValue.class) {
                     TypeCodec codec = new CodecRegistry().codecFor(argument);
                     TupleValue tup = (TupleValue) codec.parse(argument);
                     pstmt.setTupleValue(i, tup);
@@ -253,44 +250,44 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                     TypeCodec codec = new CodecRegistry().codecFor(argument);
                     UDTValue udt = (UDTValue) codec.parse(argument);
                     pstmt.setUDTValue(i, udt);
-                    } else if (javaType.isAssignableFrom(Set.class)) {
-                    TypeCodec codec = new CodecRegistry().codecFor(argument);
+                } else if (javaType.isAssignableFrom(Set.class)) {
+                    TypeCodec codec = new CodecRegistry().codecFor(tp);
                     Set<?> theSet = (Set<?>) codec.parse(argument);
-                    pstmt.setSet(i,theSet);
+                    pstmt.setSet(i, theSet);
                 } else if (javaType.isAssignableFrom(List.class)) {
-                    TypeCodec codec = new CodecRegistry().codecFor(argument);
+                    TypeCodec codec = new CodecRegistry().codecFor(tp);
                     List<?> theList = (List<?>) codec.parse(argument);
-                    pstmt.setList(i,theList);
+                    pstmt.setList(i, theList);
                 } else if (javaType.isAssignableFrom(Map.class)) {
-                    TypeCodec codec = new CodecRegistry().codecFor(argument);
-                    Map<?,?> theMap = (Map<?,?>) codec.parse(argument);
-                    pstmt.setMap(i,theMap);
-                }
-                else
+                    TypeCodec codec = new CodecRegistry().codecFor(tp);
+                    Map<?, ?> theMap = (Map<?, ?>) codec.parse(argument);
+                    pstmt.setMap(i, theMap);
+                } else
                     throw new RuntimeException("Unsupported Type: " + javaType);
 
             } catch (ParseException e) {
-                throw new RuntimeException("Could not Convert Argument #" + i + " \"" + argument + "\" to type" + javaType) ;
+                throw new RuntimeException("Could not Convert Argument #" + i + " \"" + argument + "\" to type" + javaType);
             } catch (NullPointerException e) {
-                throw new RuntimeException("Could not set argument no: "+(i+1)+" - missing parameter marker?");
+                throw new RuntimeException("Could not set argument no: " + (i + 1) + " - missing parameter marker?");
             }
         }
     }
 
     private BoundStatement getPreparedStatement(Session conn) {
-        return getPreparedStatement(conn,false);
+        return getPreparedStatement(conn, false);
     }
 
     // TODO - How thread safe is this - conn gets shared for everyone.
     private BoundStatement getPreparedStatement(Session conn, boolean callable) {
         Map<String, PreparedStatement> preparedStatementMap = perConnCache.get(conn);
-        if (null == preparedStatementMap ) {
+        if (null == preparedStatementMap) {
             @SuppressWarnings("unchecked") // LRUMap is not generic
                     Map<String, PreparedStatement> lruMap = new LRUMap(MAX_OPEN_PREPARED_STATEMENTS) {
                 private static final long serialVersionUID = 1L;
+
                 @Override
                 protected boolean removeLRU(LinkEntry entry) {
-                    PreparedStatement preparedStatement = (PreparedStatement)entry.getValue();
+                    PreparedStatement preparedStatement = (PreparedStatement) entry.getValue();
                     return true;
                 }
             };
@@ -314,15 +311,15 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     }
 
     private String stringOf(Object o) {
-       if (o.getClass() == Date.class)
-           return CassandraDateFormat1.format(o);
-       else if (ByteBuffer.class.isAssignableFrom(o.getClass()))
-           return bytesToHex((ByteBuffer) o);
-       else
-           return o.toString();
+        if (o.getClass() == Date.class)
+            return CassandraDateFormat1.format(o);
+        else if (ByteBuffer.class.isAssignableFrom(o.getClass()))
+            return bytesToHex((ByteBuffer) o);
+        else
+            return o.toString();
     }
 
-    private Object getObject ( Row row, int index ) {
+    private Object getObject(Row row, int index) {
 
 
         if (row.isNull(index))
@@ -331,47 +328,47 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
         DataType columnType = row.getColumnDefinitions().getType(index);
         if (columnType.isCollection()) {
-            if (columnType.getClass().isAssignableFrom(Set.class)) {
-                Class<?> innerType = columnType.getTypeArguments().get(0).getClass();
+            if (getClass(columnType).isAssignableFrom(Set.class)) {
+                Class<?> innerType = getClass(columnType.getTypeArguments().get(0));
                 StringBuilder sb = new StringBuilder("{");
                 String comma = "";
-                for (Object o : row.getSet(index,innerType)) {
+                for (Object o : row.getSet(index, innerType)) {
                     sb.append(comma).append(stringOf(o));
-                    comma=",";
+                    comma = ",";
                 }
                 sb.append("}");
                 return sb;
             }
-            if (columnType.getClass().isAssignableFrom(List.class)) {
-                Class<?> innerType = columnType.getTypeArguments().get(0).getClass();
+            if (getClass(columnType).isAssignableFrom(List.class)) {
+                Class<?> innerType = getClass(columnType.getTypeArguments().get(0));
                 StringBuilder sb = new StringBuilder("[");
                 String comma = "";
                 for (Object o : row.getList(index, innerType)) {
                     sb.append(comma).append(stringOf(o));
-                    comma=",";
+                    comma = ",";
                 }
                 sb.append("]");
                 return sb;
             }
-            if (columnType.getClass().isAssignableFrom(Map.class)) {
-                Class<?> keyType = columnType.getTypeArguments().get(0).getClass();
-                Class<?> valueType = columnType.getTypeArguments().get(1).getClass();
+            if (getClass(columnType).isAssignableFrom(Map.class)) {
+                Class<?> keyType = getClass(columnType.getTypeArguments().get(0));
+                Class<?> valueType = getClass(columnType.getTypeArguments().get(1));
                 StringBuilder sb = new StringBuilder("{");
                 String comma = "";
-                for (Map.Entry<?,?> e :  row.getMap(index, keyType, valueType).entrySet()) {
+                for (Map.Entry<?, ?> e : row.getMap(index, keyType, valueType).entrySet()) {
                     sb.append(comma)
-                      .append(stringOf(e.getKey()))
-                      .append(':')
-                      .append(stringOf(e.getValue()));
-                    comma=",";
+                            .append(stringOf(e.getKey()))
+                            .append(':')
+                            .append(stringOf(e.getValue()));
+                    comma = ",";
                 }
                 sb.append("}");
                 return sb;
             }
-            throw new RuntimeException("Unknown collection type: " + columnType.getName() );
+            throw new RuntimeException("Unknown collection type: " + columnType.getName());
         }
 
-        Class<?> javaType = columnType.getClass();
+        Class<?> javaType = getClass(columnType);
 
         if (javaType == Integer.class)
             return row.getInt(index);
@@ -379,8 +376,10 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
             return row.getBool(index);
         if (javaType == ByteBuffer.class)
             return row.getBytes(index);
-        if (javaType == Date.class)
-            return CassandraDateFormat1.format(row.getDate(index));
+        if (javaType == Date.class) {
+            Date d = row.getTimestamp(index);
+            return CassandraDateFormat1.format(d);
+        }
         if (javaType == BigDecimal.class)
             return row.getDecimal(index);
         if (javaType == Double.class)
@@ -403,15 +402,65 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
             return row.getUDTValue(index);
 
 
-        throw new RuntimeException("Type "+ javaType + " is not supported");
+        throw new RuntimeException("Type " + javaType + " is not supported");
     }
 
+    public static Class getClass(DataType type) {
+        switch (type.getName()) {
+            case ASCII:
+                return String.class;
+            case BIGINT:
+                return Long.class;
+            case BLOB:
+                return ByteBuffer.class;
+            case BOOLEAN:
+                return Boolean.class;
+            case COUNTER:
+                return Long.class;
+            case DATE:
+                return LocalDate.class;
+            case DECIMAL:
+                return BigDecimal.class;
+            case DOUBLE:
+                return Double.class;
+            case FLOAT:
+                return Float.class;
+            case INET:
+                return InetAddress.class;
+            case INT:
+                return Integer.class;
+            case SMALLINT:
+                return Short.class;
+            case TEXT:
+                return String.class;
+            case TIMESTAMP:
+                return Date.class;
+            case TIME:
+                return Long.class;
+            case TIMEUUID:
+                return UUID.class;
+            case TINYINT:
+                return Byte.class;
+            case UUID:
+                return UUID.class;
+            case VARCHAR:
+                return String.class;
+            case VARINT:
+                return BigInteger.class;
+            case LIST:
+                return List.class;
+            case SET:
+                return Set.class;
+            case MAP:
+                return Map.class;
+        }
+        throw new RuntimeException("Missing handling of " + type);
+    }
 
     /**
      * Gets a Data object from a ResultSet.
      *
-     * @param rs
-     *            ResultSet passed in from a database query
+     * @param rs ResultSet passed in from a database query
      * @return a Data object
      */
 
@@ -424,7 +473,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
         int numColumns = rs.getColumnDefinitions().size();
         for (int i = 0; i < numColumns; i++) {
             sb.append(meta.getName(i));
-            if (i==numColumns - 1){
+            if (i == numColumns - 1) {
                 sb.append('\n');
             } else {
                 sb.append('\t');
@@ -434,9 +483,9 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
         JMeterVariables jmvars = getThreadContext().getVariables();
         String varnames[] = getVariableNames().split(COMMA);
         String resultVariable = getResultVariable().trim();
-        List<Map<String, Object> > results = null;
-        if(resultVariable.length() > 0) {
-            results = new ArrayList<Map<String,Object> >();
+        List<Map<String, Object>> results = null;
+        if (resultVariable.length() > 0) {
+            results = new ArrayList<Map<String, Object>>();
             jmvars.putObject(resultVariable, results);
         }
 
@@ -446,7 +495,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
             j++;
             for (int i = 0; i < numColumns; i++) {
 
-                Object o = getObject(crow,i) ;
+                Object o = getObject(crow, i);
 
                 Class clazz = new CodecRegistry().codecFor(rs.getColumnDefinitions().getType(i)).getJavaType().getRawType();
 
@@ -454,8 +503,8 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                     o = bytesToHex((ByteBuffer) o);
                 }
 
-                if(results != null) {
-                    if(row == null) {
+                if (results != null) {
+                    if (row == null) {
                         row = new HashMap<String, Object>(numColumns);
                         results.add(row);
                     }
@@ -463,15 +512,15 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                 }
 
                 sb.append(o);
-                if (i==numColumns -1){
+                if (i == numColumns - 1) {
                     sb.append('\n');
                 } else {
                     sb.append('\t');
                 }
                 if (i < varnames.length) { // i starts at 0
                     String name = varnames[i].trim();
-                    if (name.length()>0){ // Save the value in the variable if present
-                        jmvars.put(name+UNDERSCORE+j, o == null ? null : o.toString());
+                    if (name.length() > 0) { // Save the value in the variable if present
+                        jmvars.put(name + UNDERSCORE + j, o == null ? null : o.toString());
                     }
                 }
             }
@@ -498,18 +547,18 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     }
 
     public static void close(Session c) {
-        int x=1;
+        int x = 1;
         // TODO - implement some sort of close
     }
 
     public static void close(Statement s) {
-        int x=1;
+        int x = 1;
         // TODO - we probably don't need to do anything here
         // TODO - submit any open batches
     }
 
     public static void close(ResultSet rs) {
-        int x=1;
+        int x = 1;
         // TODO - again, probably no-op
     }
 
@@ -532,8 +581,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     }
 
     /**
-     * @param query
-     *            The query to set.
+     * @param query The query to set.
      */
     public void setQuery(String query) {
         this.query = query;
@@ -547,8 +595,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
     }
 
     /**
-     * @param sessionName
-     *            The dataSource to set.
+     * @param sessionName The dataSource to set.
      */
     public void setDataSource(String sessionName) {
         this.sessionName = sessionName;
@@ -607,7 +654,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
      * @return the resultVariable
      */
     public String getResultVariable() {
-        return resultVariable ;
+        return resultVariable;
     }
 
     /**
@@ -635,6 +682,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     /**
      * {@inheritDoc}
+     *
      * @see org.apache.jmeter.testelement.TestStateListener#testStarted()
      */
     public void testStarted() {
@@ -643,6 +691,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     /**
      * {@inheritDoc}
+     *
      * @see org.apache.jmeter.testelement.TestStateListener#testStarted(String)
      */
     public void testStarted(String host) {
@@ -651,6 +700,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     /**
      * {@inheritDoc}
+     *
      * @see org.apache.jmeter.testelement.TestStateListener#testEnded()
      */
     public void testEnded() {
@@ -659,6 +709,7 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
 
     /**
      * {@inheritDoc}
+     *
      * @see org.apache.jmeter.testelement.TestStateListener#testEnded(String)
      */
     public void testEnded(String host) {

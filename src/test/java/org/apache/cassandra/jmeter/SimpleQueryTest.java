@@ -103,7 +103,7 @@ public class SimpleQueryTest extends JMeterTest {
                 { "inet", "/123.123.123.123", ia },
                 { "int",  "2147483647", Integer.MAX_VALUE },
                 { "text", "text", "text" },
-                { "timestamp", "1997-08-28 23:14:00-0700", new Date(872835240000L) },
+                { "timestamp", "1997-08-29 01:14:00-0500", new Date(872835240000L) },
                 { "timeuuid", "fe2b4360-28c6-11e2-81c1-0800200c9a66", UUID.fromString("FE2B4360-28C6-11E2-81C1-0800200C9A66") },
                 { "uuid", "067e6162-3b6f-4ae2-a171-2470b63dff00", UUID.fromString("067e6162-3b6f-4ae2-a171-2470b63dff00") },
                 { "varchar", "varchar", "varchar" },
