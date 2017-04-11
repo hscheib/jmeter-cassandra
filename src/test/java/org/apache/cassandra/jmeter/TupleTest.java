@@ -48,7 +48,7 @@ public class TupleTest extends JMeterTest {
     Logger logger = LoggerFactory.getLogger(TupleTest.class);
 
 
-    private static final String EXPECTED = "(10, 'Ten', 10.0)";
+    private static final String EXPECTED = "(10,'Ten',10.0)";
     private static final String TABLE = "tup";
     CassandraConnection cc = null;
     private static final String KEYSPACE = "k1";

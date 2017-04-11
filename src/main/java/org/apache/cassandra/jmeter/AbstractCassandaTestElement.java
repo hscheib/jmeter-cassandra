@@ -243,11 +243,11 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                 else if (javaType == BigInteger.class)
                     pstmt.setVarint(i, new BigInteger(argument));
                 else if (javaType == TupleValue.class) {
-                    TypeCodec codec = new CodecRegistry().codecFor(argument);
+                    TypeCodec codec = new CodecRegistry().codecFor(tp);
                     TupleValue tup = (TupleValue) codec.parse(argument);
                     pstmt.setTupleValue(i, tup);
                 } else if (javaType == UDTValue.class) {
-                    TypeCodec codec = new CodecRegistry().codecFor(argument);
+                    TypeCodec codec = new CodecRegistry().codecFor(tp);
                     UDTValue udt = (UDTValue) codec.parse(argument);
                     pstmt.setUDTValue(i, udt);
                 } else if (javaType.isAssignableFrom(Set.class)) {
@@ -453,6 +453,10 @@ public abstract class AbstractCassandaTestElement extends AbstractTestElement im
                 return Set.class;
             case MAP:
                 return Map.class;
+            case UDT:
+                return UDTValue.class;
+            case TUPLE:
+                return TupleValue.class;
         }
         throw new RuntimeException("Missing handling of " + type);
     }

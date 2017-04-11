@@ -40,7 +40,7 @@ public class UDTTest extends JMeterTest {
     Logger logger = LoggerFactory.getLogger(UDTTest.class);
 
 
-    private static final String EXPECTED = "{t_int:10, t_string:'ten', t_float:10.0}";
+    private static final String EXPECTED = "{t_int:10,t_string:'ten',t_float:10.0}";
     private static final String TABLE = "udt";
     CassandraConnection cc = null;
     private static final String KEYSPACE = "k1";
